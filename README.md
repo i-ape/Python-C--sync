@@ -4,7 +4,7 @@
  on the other branches of this repo there are some options for different use cases with other methods.  
 
 method:
-python sync.py /path/to/source /path/to/replica 60 /path/to/logfile.txt
+python sync.py /path/to/source /path/to/replica numOfSecToSync /path/to/logfile.txt
 
 
 a program that synchronizes two folders: source and
