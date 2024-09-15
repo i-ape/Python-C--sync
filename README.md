@@ -1,3 +1,3 @@
 # Python-C--sync
-bash & rsync
+bash & rsync /n
 alt cronjob & rsync
