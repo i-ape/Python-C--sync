@@ -1,4 +1,12 @@
 # Python-C--sync
+
+ in this branch i have provided my main answer the question with only python.  
+ on the other branches of this repo there are some options for different use cases with other methods.  
+
+method:
+python sync.py /path/to/source /path/to/replica 60 /path/to/logfile.txt
+
+
 a program that synchronizes two folders: source and
 replica. The program should maintain a full, identical copy of source
 folder at replica folder.
@@ -23,5 +31,3 @@ It is allowed (and recommended) to use external libraries implementing
  another function that calculates MD5 if you need it for the task – it is
  perfectly acceptable to use a third-party (or built-in) library;  
 
- in this branch i have provided my main answer the question with only python.  
- on the other branches of this repo there are some options for different use cases with other methods.  

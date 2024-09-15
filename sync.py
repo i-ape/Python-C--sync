@@ -2,7 +2,8 @@ import os
 import time
 import shutil
 import logging
-import sys
+from hashlib import md5
+import argparse
 
 # Set up logging
 def setup_logging(log_file):
@@ -14,6 +15,14 @@ def setup_logging(log_file):
 def log_message(message):
     logging.info(message)
     print(message)
+
+# Calculate the MD5 checksum of a file
+def calculate_md5(file_path):
+    hash_md5 = md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
 # Sync function to copy files and remove deleted ones
 def sync_folders(source, replica):
@@ -29,8 +38,8 @@ def sync_folders(source, replica):
             # Create destination directory if it doesn't exist
             os.makedirs(os.path.dirname(dest_file), exist_ok=True)
 
-            # Copy file if it doesn't exist or is different
-            if not os.path.exists(dest_file) or os.path.getmtime(src_file) > os.path.getmtime(dest_file):
+            # Check MD5 hash of both files to see if copying is necessary
+            if not os.path.exists(dest_file) or calculate_md5(src_file) != calculate_md5(dest_file):
                 shutil.copy2(src_file, dest_file)
                 log_message(f"Copied {src_file} to {dest_file}")
 
@@ -49,19 +58,20 @@ def sync_folders(source, replica):
 
 # Main function
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Usage: python sync.py <source_folder> <replica_folder> <interval_in_seconds> <log_file>")
-        sys.exit(1)
+    # Using argparse for argument parsing
+    parser = argparse.ArgumentParser(description="Folder synchronization script.")
+    parser.add_argument('source_folder', type=str, help='Path to the source folder.')
+    parser.add_argument('replica_folder', type=str, help='Path to the replica folder.')
+    parser.add_argument('interval', type=int, help='Sync interval in seconds.')
+    parser.add_argument('log_file', type=str, help='Path to the log file.')
 
-    source_folder = sys.argv[1]
-    replica_folder = sys.argv[2]
-    interval = int(sys.argv[3])
-    log_file = sys.argv[4]
+    # Parse the arguments
+    args = parser.parse_args()
 
     # Set up logging
-    setup_logging(log_file)
+    setup_logging(args.log_file)
 
     # Run sync periodically
     while True:
-        sync_folders(source_folder, replica_folder)
-        time.sleep(interval)
+        sync_folders(args.source_folder, args.replica_folder)
+        time.sleep(args.interval)
