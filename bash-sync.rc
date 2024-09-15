@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Check if correct number of arguments is provided
+if [ "$#" -ne 4 ]; then
+  echo "Usage: $0 <source_folder> <replica_folder> <interval_in_seconds> <log_file>"
+  exit 1
+fi
+
+SOURCE=$1
+REPLICA=$2
+INTERVAL=$3
+LOGFILE=$4
+
+# Function to log messages to both console and log file
+log_message() {
+  echo "$(date +'%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOGFILE"
+}
+
+# Function to perform folder synchronization
+sync_folders() {
+  log_message "Starting synchronization from $SOURCE to $REPLICA"
+  
+  # Use rsync to sync files from source to replica
+  rsync -av --delete "$SOURCE" "$REPLICA" | tee -a "$LOGFILE"
+  
+  log_message "Synchronization completed."
+}
+
+# Initial sync
+sync_folders
+
+# Run sync periodically
+while true; do
+  sleep "$INTERVAL"
+  sync_folders
+done
