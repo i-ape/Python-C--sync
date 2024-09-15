@@ -1,19 +1,19 @@
 #!/bin/bash
 
 # Check if correct number of arguments is provided
-if [ "$#" -ne 4 ]; then
-  echo "Usage: $0 <source_folder> <replica_folder> <interval_in_seconds> <log_file>"
+if [ "$#" -ne 3 ]; then
+  echo "Usage: $0 <source_folder> <replica_folder> <log_file>"
   exit 1
 fi
 
 SOURCE=$1
 REPLICA=$2
-INTERVAL=$3
-LOGFILE=$4
+LOGFILE=$3
 
 # Function to log messages to both console and log file
 log_message() {
-  echo "$(date +'%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOGFILE"
+  local message="$1"
+  echo "$(date +'%Y-%m-%d %H:%M:%S') - $message" | tee -a "$LOGFILE"
 }
 
 # Function to perform folder synchronization
@@ -26,11 +26,5 @@ sync_folders() {
   log_message "Synchronization completed."
 }
 
-# Initial sync
+# Perform the sync
 sync_folders
-
-# Run sync periodically
-while true; do
-  sleep "$INTERVAL"
-  sync_folders
-done
