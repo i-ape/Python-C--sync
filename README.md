@@ -1,4 +1,7 @@
 # Python-C--sync
-“* **watchdog**: The script uses the `watchdog` library to monitor the source folder for changes. * **SyncHandler**: This class inherits from `FileSystemEventHandler` and triggers the `sync_folders` function whenever there is any file system event (create, modify, delete). * **sync\_folders**: Copies files from the source to the replica folder, ensuring the replica is an exact copy. * **Observer**: The `Observer` watches the source folder for changes and calls the event handler when something happens.”
+with this version instead of a time interval triggering a sync i would be a python lib called watchdog that would cause this  
+watchdog works in real time which results in less unneeded syncs  
+the negative of this is this lib is managed by others and could become non functional  
 
-
+method:  
+python sync+wat.py /path/to/source /path/to/replica /path/to/logfile.txt
