@@ -22,3 +22,6 @@ It is allowed (and recommended) to use external libraries implementing
  other well-known algorithms. For example, there is no point in implementing yet
  another function that calculates MD5 if you need it for the task – it is
  perfectly acceptable to use a third-party (or built-in) library;  
+
+ in this branch i have provided my main answer the question with only python.  
+ on the other branches of this repo there are some options for different use cases with other methods.  
