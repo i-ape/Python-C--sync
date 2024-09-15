@@ -1,82 +1,92 @@
 import os
-import shutil
 import time
-import argparse
+import shutil
 import logging
-from hashlib import md5
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import sys
 
-def setup_logger(log_file):
-    logging.basicConfig(filename=log_file, level=logging.INFO,
-                        format='%(asctime)s - %(levelname)s - %(message)s')
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    console.setFormatter(formatter)
-    logging.getLogger().addHandler(console)
+# Set up logging
+def setup_logging(log_file):
+    logging.basicConfig(filename=log_file, level=logging.INFO, 
+                        format='%(asctime)s - %(message)s', 
+                        datefmt='%Y-%m-%d %H:%M:%S')
 
-def calculate_md5(file_path):
-    hash_md5 = md5()
-    with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash_md5.update(chunk)
-    return hash_md5.hexdigest()
+# Log a message to both the console and log file
+def log_message(message):
+    logging.info(message)
+    print(message)
 
+# Sync function to copy files and remove deleted ones
 def sync_folders(source, replica):
-    # Sync source to replica
+    log_message(f"Starting synchronization from {source} to {replica}")
+
+    # Copy all files from source to replica
     for root, dirs, files in os.walk(source):
-        rel_path = os.path.relpath(root, source)
-        replica_root = os.path.join(replica, rel_path)
+        for file in files:
+            src_file = os.path.join(root, file)
+            relative_path = os.path.relpath(src_file, source)
+            dest_file = os.path.join(replica, relative_path)
 
-        if not os.path.exists(replica_root):
-            os.makedirs(replica_root)
-            logging.info(f"Created directory: {replica_root}")
+            # Create destination directory if it doesn't exist
+            os.makedirs(os.path.dirname(dest_file), exist_ok=True)
 
-        for file_name in files:
-            source_file = os.path.join(root, file_name)
-            replica_file = os.path.join(replica_root, file_name)
+            # Copy file if it doesn't exist or is different
+            if not os.path.exists(dest_file) or os.path.getmtime(src_file) > os.path.getmtime(dest_file):
+                shutil.copy2(src_file, dest_file)
+                log_message(f"Copied {src_file} to {dest_file}")
 
-            if not os.path.exists(replica_file) or calculate_md5(source_file) != calculate_md5(replica_file):
-                shutil.copy2(source_file, replica_file)
-                logging.info(f"Copied/Updated file: {source_file} to {replica_file}")
-
-    # Remove extra files and directories in the replica folder
-    for root, dirs, files in os.walk(replica, topdown=False):
-        rel_path = os.path.relpath(root, replica)
-        source_root = os.path.join(source, rel_path)
-
-        for file_name in files:
-            replica_file = os.path.join(root, file_name)
-            source_file = os.path.join(source_root, file_name)
+    # Remove files in replica that no longer exist in source
+    for root, dirs, files in os.walk(replica):
+        for file in files:
+            replica_file = os.path.join(root, file)
+            relative_path = os.path.relpath(replica_file, replica)
+            source_file = os.path.join(source, relative_path)
 
             if not os.path.exists(source_file):
                 os.remove(replica_file)
-                logging.info(f"Removed file: {replica_file}")
+                log_message(f"Deleted {replica_file} from replica")
 
-        for dir_name in dirs:
-            replica_dir = os.path.join(root, dir_name)
-            source_dir = os.path.join(source_root, dir_name)
+    log_message("Synchronization completed.")
 
-            if not os.path.exists(source_dir):
-                shutil.rmtree(replica_dir)
-                logging.info(f"Removed directory: {replica_dir}")
+# Event handler class for monitoring folder changes
+class SyncHandler(FileSystemEventHandler):
+    def __init__(self, source, replica):
+        self.source = source
+        self.replica = replica
 
-def main():
-    parser = argparse.ArgumentParser(description="Synchronize two folders")
-    parser.add_argument("source", help="Path to the source folder")
-    parser.add_argument("replica", help="Path to the replica folder")
-    parser.add_argument("interval", type=int, help="Synchronization interval in seconds")
-    parser.add_argument("log_file", help="Path to the log file")
-    
-    args = parser.parse_args()
-    
-    setup_logger(args.log_file)
-    
-    logging.info("Starting folder synchronization.")
-    
-    while True:
-        sync_folders(args.source, args.replica)
-        logging.info(f"Synchronization complete. Waiting for {args.interval} seconds.")
-        time.sleep(args.interval)
+    def on_any_event(self, event):
+        sync_folders(self.source, self.replica)
 
+# Main function
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 4:
+        print("Usage: python sync.py <source_folder> <replica_folder> <log_file>")
+        sys.exit(1)
+
+    source_folder = sys.argv[1]
+    replica_folder = sys.argv[2]
+    log_file = sys.argv[3]
+
+    # Set up logging
+    setup_logging(log_file)
+
+    # Perform initial sync
+    sync_folders(source_folder, replica_folder)
+
+    # Set up the watchdog observer
+    event_handler = SyncHandler(source_folder, replica_folder)
+    observer = Observer()
+    observer.schedule(event_handler, path=source_folder, recursive=True)
+
+    # Start the observer
+    observer.start()
+    log_message("Started folder monitoring with watchdog.")
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+
+    observer.join()
